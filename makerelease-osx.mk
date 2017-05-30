@@ -70,7 +70,8 @@
 SHELL := bash
 
 # A bit awkward, but OSX doesn't have a proper `readlink -f`.
-SRCDIR := $(shell dirname $(lastword $(shell stat -f "%N %Y" $(lastword $(MAKEFILE_LIST)))))
+# SRCDIR := $(shell dirname $(lastword $(shell stat -c "%N %Y" $(lastword $(MAKEFILE_LIST)))))
+SRCDIR := $(shell dirname $(shell readlink -f $(lastword $(MAKEFILE_LIST))))
 
 # Same as in script-helper, but a bit easier on the eye (but more error prone)
 # and Makefile compatible
@@ -103,9 +104,9 @@ export LDFLAGS
 LTO_FLAGS = -flto -ffunction-sections -fdata-sections
 
 # Dependency versions
-zlib_version = 1.2.8
-zlib_hash = a4d316c404ff54ca545ea71a27af7dbc29817088
-zlib_url = http://zlib.net/zlib-$(zlib_version).tar.gz
+zlib_version = 1.2.11
+zlib_hash = e6d119755acdf9104d7ba236b1242696940ed6dd
+zlib_url = https://sourceforge.net/projects/libpng/files/zlib/$(zlib_version)/zlib-$(zlib_version).tar.gz
 
 expat_version = 2.2.0
 expat_hash = 8453bc52324be4c796fd38742ec48470eef358b3
@@ -347,7 +348,7 @@ aria2.%.build: zlib.%.build expat.%.build gmp.%.build cares.%.build sqlite.%.bui
 	$(eval DEST := $$(basename $$@))
 	$(eval ARCH := $$(subst .,,$$(suffix $$(DEST))))
 	mkdir -p $(DEST)
-	( cd $(DEST) && ../$(SRCDIR)/configure \
+	( cd $(DEST) && $(SRCDIR)/configure \
 		--prefix=$(ARIA2_PREFIX) \
 		--bindir=$(PWD)/$(DEST) \
 		--sysconfdir=/etc \
@@ -381,7 +382,6 @@ $(ARIA2_DIST).tar.bz2: aria2.build $(ARIA2_DOCS) $(ARIA2_CHANGELOG)
 	find $(ARIA2_PREFIX) -exec touch "{}" \;
 	tar -cf $@ \
 		--use-compress-program=bzip2 \
-		--options='compression-level=9' \
 		$(ARIA2)
 
 $(ARIA2_DIST).pkg: aria2.build $(ARIA2_DOCS) $(ARIA2_CHANGELOG)
@@ -411,7 +411,7 @@ $(ARIA2_DIST).dmg: $(ARIA2_DIST).pkg
 	-rm -rf dmg
 	mkdir -p dmg/Docs
 	cp -av $(ARIA2_DIST).pkg dmg/aria2.pkg
-	find $(ARIA2_PREFIX)/share/doc/aria2 -type f -depth 1 -exec cp -av "{}" dmg/Docs \;
+	/usr/bin/find $(ARIA2_PREFIX)/share/doc/aria2 -type f -depth 1 -exec cp -av "{}" dmg/Docs \;
 	rm -rf dmg/Docs/README dmg/Docs/README.rst
 	cp $(SRCDIR)/osx-package/DS_Store dmg/.DS_Store
 	hdiutil create $@.uncompressed \
